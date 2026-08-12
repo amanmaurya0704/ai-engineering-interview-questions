@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AI Agent Attack Surface Map</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
+
+  :root{
+    --bg: #0b0f14;
+    --panel: #111823;
+    --panel2: #0e1520;
+    --line: #22303f;
+    --text: #dbe6ef;
+    --dim: #7d93a6;
+    --accent: #ff6a3d;
+    --accent2: #3ddc97;
+    --accent3: #5fb4ff;
+    --tag-bg: #23130d;
+    --fix-bg: #0d1f18;
+    --fix-line: #1c4632;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, #14202c 0%, transparent 60%),
+      radial-gradient(1000px 500px at 100% 0%, #191220 0%, transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    padding:48px 6vw 100px;
+  }
+  .wrap{max-width:1180px;margin:0 auto;}
+
+  header{margin-bottom:44px;}
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    color:var(--accent);
+    font-size:12.5px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    margin-bottom:14px;
+    display:flex;align-items:center;gap:10px;
+  }
+  .eyebrow::before{content:'';width:22px;height:1px;background:var(--accent);display:inline-block;}
+  h1{
+    font-size:clamp(28px,4vw,44px);
+    line-height:1.08;
+    margin:0 0 14px;
+    font-weight:800;
+    letter-spacing:-0.01em;
+  }
+  h1 span{color:var(--dim);font-weight:600;}
+  .sub{color:var(--dim);font-size:15.5px;max-width:660px;line-height:1.6;}
+  .hint{
+    margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:11.5px;
+    color:var(--accent3);display:flex;align-items:center;gap:8px;
+  }
+  .hint::before{content:'▸';color:var(--accent2);}
+
+  .pipeline{position:relative;display:flex;flex-direction:column;margin-top:56px;}
+  .track-label{
+    font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--accent2);margin-bottom:10px;
+  }
+
+  .stage{position:relative;display:grid;grid-template-columns:230px 1fr;gap:22px;padding:22px 0;}
+  .stage:not(:last-child){border-bottom:1px dashed var(--line);}
+  .stage-num{font-family:'JetBrains Mono',monospace;color:var(--dim);font-size:12px;}
+  .stage-box{
+    background:linear-gradient(180deg,var(--panel),var(--panel2));
+    border:1px solid var(--line);border-left:3px solid var(--accent3);
+    border-radius:8px;padding:16px 18px;display:flex;flex-direction:column;justify-content:center;
+    height:fit-content;
+  }
+  .stage-title{font-weight:700;font-size:16.5px;margin:0 0 4px;}
+  .stage-desc{color:var(--dim);font-size:12.8px;line-height:1.5;}
+
+  .risks{display:flex;flex-direction:column;gap:8px;}
+
+  details.risk{
+    background:var(--tag-bg);
+    border:1px solid #4a2416;
+    border-radius:7px;
+    overflow:hidden;
+  }
+  details.risk[open]{border-color:#7a3a20;}
+  details.risk summary{
+    list-style:none;cursor:pointer;
+    padding:11px 14px;
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#ffbfa8;
+  }
+  details.risk summary::-webkit-details-marker{display:none;}
+  details.risk summary .chev{
+    color:var(--dim);font-size:11px;transition:transform .2s ease;flex-shrink:0;
+  }
+  details.risk[open] summary .chev{transform:rotate(90deg);color:var(--accent2);}
+  details.risk .body{
+    padding:2px 16px 16px;
+    border-top:1px solid #3a1c10;
+  }
+  details.risk .desc{color:var(--dim);font-size:12.8px;line-height:1.55;margin:12px 0 12px;}
+  .fixbox{
+    background:var(--fix-bg);border:1px solid var(--fix-line);border-radius:6px;
+    padding:12px 14px;
+  }
+  .fixbox .fixlabel{
+    font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--accent2);margin-bottom:8px;
+  }
+  .fixbox ul{margin:0;padding-left:18px;color:var(--text);font-size:12.8px;line-height:1.7;}
+  .fixbox li::marker{color:var(--accent2);}
+
+  .connector{display:flex;justify-content:center;padding:2px 0;}
+
+  .cross{margin-top:60px;padding-top:36px;border-top:1px solid var(--line);}
+  .cross-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:20px;}
+  .cross-card{
+    background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--accent2);
+    border-radius:8px;padding:4px;
+  }
+  .cross-card > details.risk{border:none;background:transparent;border-radius:6px;}
+  .cross-card > details.risk summary{color:#c9f7e2;}
+
+  /* tables */
+  .tables{margin-top:70px;padding-top:36px;border-top:1px solid var(--line);}
+  .table-block{margin-top:34px;}
+  .table-block h2{font-size:19px;margin:0 0 4px;font-weight:800;}
+  .table-block p{color:var(--dim);font-size:12.8px;margin:0 0 16px;}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  thead th{
+    text-align:left;font-family:'JetBrains Mono',monospace;font-size:10.5px;
+    letter-spacing:.08em;text-transform:uppercase;color:var(--accent2);
+    border-bottom:1px solid var(--line);padding:10px 12px;
+  }
+  tbody td{
+    padding:12px;border-bottom:1px solid var(--line);vertical-align:top;
+    color:var(--text);line-height:1.5;
+  }
+  tbody tr:hover{background:rgba(255,255,255,0.02);}
+  td.stage-col{color:var(--accent3);font-family:'JetBrains Mono',monospace;font-size:11.5px;white-space:nowrap;}
+  td.risk-col{color:#ffbfa8;font-weight:600;white-space:nowrap;}
+  td.fix-col ul{margin:0;padding-left:16px;}
+  td.fix-col li{margin-bottom:4px;}
+  td.fix-col li::marker{color:var(--accent2);}
+
+  .table-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:8px;}
+
+  footer{margin-top:56px;color:var(--dim);font-size:12px;font-family:'JetBrains Mono',monospace;border-top:1px solid var(--line);padding-top:18px;}
+
+  @media (max-width:640px){
+    .stage{grid-template-columns:1fr;gap:10px;}
+    .stage-num{display:none;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Agentic AI &middot; Threat Surface</div>
+    <h1>Where the risks live<br><span>and how to close each one</span></h1>
+    <p class="sub">Each stage of an agent's operating loop opens a distinct attack surface. Risks are placed at the stage where they're introduced. Click any risk to expand it — description plus the concrete mitigation techniques for it.</p>
+    <div class="hint">Click a risk card to expand / collapse</div>
+  </header>
+
+  <div class="pipeline">
+
+    <div class="track-label">01 — Ingestion</div>
+    <div class="stage">
+      <div class="stage-num">STAGE 1</div>
+      <div class="stage-box">
+        <p class="stage-title">Input & External Data Sources</p>
+        <p class="stage-desc">User prompts, retrieved web pages, documents, emails, API responses feeding the agent's context.</p>
+      </div>
+      <div class="risks">
+
+        <details class="risk">
+          <summary>Prompt Injection (Direct & Indirect) <span class="chev">▸</span></summary>
+          <div class="body">
+            <p class="desc">Malicious instructions embedded in user input or in external content (a webpage, PDF, email) that the agent reads and mistakes for legitimate commands, hijacking its behavior.</p>
+            <div class="fixbox">
+              <div class="fixlabel">Mitigation</div>
+              <ul>
+                <li>Treat all external/retrieved content as untrusted data, never as instructions</li>
+                <li>Separate instruction and data channels with structured delimiters or tagged roles</li>
+                <li>Run an injection-detection classifier on inputs before they reach the model</li>
+                <li>Restrict what actions can be triggered purely from document/tool content vs. verified user intent</li>
+                <li>Allowlist trusted data sources where feasible</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+
+        <details class="risk">
+          <summary>Context / Instruction Confusion <span class="chev">▸</span></summary>
+          <div class="body">
+            <p class="desc">The agent fails to distinguish system prompt, developer instructions, tool output, and user input, letting lower-trust data override higher-trust instructions.</p>
+            <div class="fixbox">
+              <div class="fixlabel">Mitigation</div>
+              <ul>
+                <li>Enforce an explicit trust hierarchy: system > developer > verified user > tool/document output</li>
+                <li>Use structured prompt formats that tag the source of every piece of context</li>
+                <li>Re-assert core instructions after any untrusted content block</li>
+                <li>Test with adversarial "instruction override" content during evaluation</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+
+        <details class="risk">
+          <summary>Agent Enumeration & Reconnaissance <span class="chev">▸</span></summary>
+          <div class="body">
+            <p class="desc">Attackers probe the agent's tool list, system prompt, or capabilities through crafted queries to map the attack surface before a targeted exploit.</p>
+            <div class="fixbox">
+              <div class="fixlabel">Mitigation</div>
+              <ul>
+                <li>Never reveal system prompts, tool schemas, or internal errors verbatim in responses</li>
+                <li>Rate-limit and monitor for repeated probing / boundary-testing patterns</li>
+                <li>Use generic error messages that don't leak internal architecture</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+
+      </div>
+    </div>
+
+    <div class="connector"><svg width="2" height="30"><line x1="1" y1="0" x2="1" y2="30" stroke="#3ddc97" stroke-width="2" stroke-dasharray="4 4"/></svg></div>
+
+    <div class="track-label">02 — Reasoning</div>
+    <div class="stage">
+      <div class="stage-num">STAGE 2</div>
+      <div class="stage-box">
+        <p class="stage-title">Agent Core — LLM Planning & Decisions</p>
+        <p class="stage-desc">The model interprets goals, plans steps, decides which tools to call, and scores confidence/risk.</p>
+      </div>
+      <div class="risks">
+
+        <details class="risk">
+          <summary>Goal Hijacking <span class="chev">▸</span></summary>
+          <div class="body">
+            <p class="desc">An attacker subtly redirects the agent's objective to serve their own purposes while the plan still looks legitimate on the surface.</p>
+            <div class="fixbox">
+              <div class="fixlabel">Mitigation</div>
+              <ul>
+                <li>Define core goals immutably at the system level, not overridable by user or tool content</li>
+                <li>Run continuous goal-consistency checks comparing each step to the original objective</li>
+                <li>Flag and pause on plan drift or unexpected sub-goal creation</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+
+        <details class="risk">
+          <summary>Decision and Approval Manipulation <span class="chev">▸</span></summary>
+          <div class="body">
+            <p class="desc">Attackers influence the model's confidence scores or approval thresholds so risky actions get auto-approved instead of escalated.</p>
+            <div class="fixbox">
+              <div class="fixlabel">Mitigation</div>
+              <ul>
+                <li>Compute risk/confidence scores in a component isolated from agent-controlled input</li>
+                <li>Sign or checksum approval thresholds so they can't be silently altered</li>
+                <li>Log every change to scoring logic or thresholds with attribution</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+
+        <details class="risk">
+          <summary>Model / Tool Output Hallucination Exploitation <span class="chev">▸</span></summary>
+          <div class="body">
+            <p class="desc">Attackers craft inputs that induce plausible-looking but false outputs (fake citations, fake approvals) which downstream systems then trust.</p>
+            <div class="fixbox">
+              <div class="fixlabel">Mitigation</div>
+              <ul>
+                <li>Require evidence/citations for any high-stakes claim before acting on it</li>
+                <li>Cross-verify critical outputs against a trusted source before execution</li>
+                <li>Route low-confidence or unverifiable outputs to human review</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+
+      </div>
+    </div>
+
+    <div class="connector"><svg width="2" height="30"><line x1="1" y1="0" x2="1" y2="30" stroke="#3ddc97" stroke-width="2" stroke-dasharray="4 4"/></svg></div>
+
+    <div class="track-label">03 — Memory</div>
+    <div class="stage">
+      <div class="stage-num">STAGE 3</div>
+      <div class="stage-box">
+        <p class="stage-title">Memory & Context Store</p>
+        <p class="stage-desc">Short-term conversation state plus long-term / vector (RAG) stores persisted across turns or sessions.</p>
+      </div>
+      <div class="risks">
+
+        <details class="risk">
+          <summary>Memory Poisoning <span class="chev">▸</span></summary>
+          <div class="body">
+            <p class="desc">Malicious data gets written into the agent's persistent memory, influencing its behavior in future sessions or for other users.</p>
+            <div class="fixbox">
+              <div class="fixlabel">Mitigation</div>
+              <ul>
+                <li>Validate and sanitize any content before it's committed to long-term memory</li>
+                <li>Namespace memory strictly per user/session — no cross-user bleed</li>
+                <li>Tag stored memories with provenance (source, time, trust level)</li>
+                <li>Require review before memory writes can influence high-impact future decisions</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+
+        <details class="risk">
+          <summary>Vector / RAG Store Poisoning <span class="chev">▸</span></summary>
+          <div class="body">
+            <p class="desc">Malicious documents are planted in a retrieval index so they get pulled into context later and treated as trusted knowledge.</p>
+            <div class="fixbox">
+              <div class="fixlabel">Mitigation</div>
+              <ul>
+                <li>Vet and allowlist sources permitted to be indexed</li>
+                <li>Run periodic anomaly audits on retrieved chunks vs. known-good baselines</li>
+                <li>Keep provenance metadata attached to every retrieved chunk</li>
+                <li>Re-index and diff on a schedule to catch unexpected content changes</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+
+        <details class="risk">
+          <summary>Sensitive Data Exposure <span class="chev">▸</span></summary>
+          <div class="body">
+            <p class="desc">PII, credentials, or confidential data inadvertently persists in agent context, memory, or logs where it can leak.</p>
+            <div class="fixbox">
+              <div class="fixlabel">Mitigation</div>
+              <ul>
+                <li>Classify data on ingestion; mask/redact sensitive fields before they enter context</li>
+                <li>Set short retention windows (TTL) on stored context</li>
+                <li>Strip secrets and PII from logs at write time, not after the fact</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+
+      </div>
+    </div>
+
+    <div class="connector"><svg width="2" height="30"><line x1="1" y1="0" x2="1" y2="30" stroke="#3ddc97" stroke-width="2" stroke-dasharray="4 4"/></svg></div>
+
+    <div class="track-label">04 — Action</div>
+    <div class="stage">
+      <div class="stage-num">STAGE 4</div>
+      <div class="stage-box">
+        <p class="stage-title">Tool Calls & Execution</p>
+        <p class="stage-desc">The agent invokes APIs, scripts, or system commands — the point where words become real-world effects.</p>
+      </div>
+      <div class="risks">
+
+        <details class="risk">
+          <summary>Tool Abuse & Privilege Escalation <span class="chev">▸</span></summary>
+          <div class="body">
+            <p class="desc">Agents exploit overly permissive tools to perform unintended actions or reach resources they shouldn't have access to.</p>
+            <div class="fixbox">
+              <div class="fixlabel">Mitigation</div>
+              <ul>
+                <li>Grant each tool the minimum privilege it needs — nothing broader</li>
+                <li>Use scoped, short-lived credentials per task instead of standing access</li>
+                <li>Maintain explicit tool allowlists per agent role</li>
+                <li>Sandbox/isolate the tool execution environment from core systems</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+
+        <details class="risk">
+          <summary>High-Impact Action Abuse <span class="chev">▸</span></summary>
+          <div class="body">
+            <p class="desc">Agents execute irreversible, financial, administrative, or externally visible operations without independent validation.</p>
+            <div class="fixbox">
+              <div class="fixlabel">Mitigation</div>
+              <ul>
+                <li>Require independent secondary validation for irreversible or financial actions</li>
+                <li>Use maker-checker (dual control) approval for critical operations</li>
+                <li>Support dry-run/simulation mode before real execution on high-stakes actions</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+
+        <details class="risk">
+          <summary>Insecure Credential / Secret Handling <span class="chev">▸</span></summary>
+          <div class="body">
+            <p class="desc">Agents store or pass API keys, tokens, or session credentials in plaintext context, logs, or memory.</p>
+            <div class="fixbox">
+              <div class="fixlabel">Mitigation</div>
+              <ul>
+                <li>Store secrets in a dedicated secret manager, never inline in prompts or logs</li>
+                <li>Issue short-lived, scoped tokens with automatic rotation</li>
+                <li>Inject credentials at execution time only, out of the model's visible context</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+
+        <details class="risk">
+          <summary>Denial of Wallet (DoW) <span class="chev">▸</span></summary>
+          <div class="body">
+            <p class="desc">Attacks that cause excessive API or compute costs by driving the agent into unbounded loops or repeated expensive calls.</p>
+            <div class="fixbox">
+              <div class="fixlabel">Mitigation</div>
+              <ul>
+                <li>Set hard budget/quota limits per session, user, and agent</li>
+                <li>Cap recursion depth and total tool-call count per task</li>
+                <li>Monitor spend in real time with automatic circuit breakers on spikes</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+
+        <details class="risk">
+          <summary>Unbounded Agentic Loops / Resource Exhaustion <span class="chev">▸</span></summary>
+          <div class="body">
+            <p class="desc">Runaway recursive planning or repeated tool-calling loops that degrade availability, distinct from the cost-focused DoW risk above.</p>
+            <div class="fixbox">
+              <div class="fixlabel">Mitigation</div>
+              <ul>
+                <li>Enforce max iteration/step limits per task</li>
+                <li>Add timeouts and watchdog processes that kill stalled runs</li>
+                <li>Detect lack of progress (repeated identical states) and break the loop automatically</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+
+      </div>
+    </div>
+
+    <div class="connector"><svg width="2" height="30"><line x1="1" y1="0" x2="1" y2="30" stroke="#3ddc97" stroke-width="2" stroke-dasharray="4 4"/></svg></div>
+
+    <div class="track-label">05 — Coordination</div>
+    <div class="stage">
+      <div class="stage-num">STAGE 5</div>
+      <div class="stage-box">
+        <p class="stage-title">Multi-Agent Communication</p>
+        <p class="stage-desc">Sub-agents or peer agents exchange tasks, results, and trust signals with each other.</p>
+      </div>
+      <div class="risks">
+
+        <details class="risk">
+          <summary>Cascading Failures <span class="chev">▸</span></summary>
+          <div class="body">
+            <p class="desc">A compromised agent in a multi-agent system propagates its bad state or malicious instructions to other agents downstream.</p>
+            <div class="fixbox">
+              <div class="fixlabel">Mitigation</div>
+              <ul>
+                <li>Place circuit breakers between agents to stop propagation of anomalous behavior</li>
+                <li>Validate inter-agent messages the same way you'd validate external input</li>
+                <li>Design for blast-radius containment (bulkheading) so one agent's failure stays local</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+
+        <details class="risk">
+          <summary>Cross-Agent Trust Exploitation <span class="chev">▸</span></summary>
+          <div class="body">
+            <p class="desc">One agent assumes another agent's output is safe purely because it came from "another agent," skipping validation.</p>
+            <div class="fixbox">
+              <div class="fixlabel">Mitigation</div>
+              <ul>
+                <li>Apply zero-trust between agents — verify, don't assume, every inter-agent payload</li>
+                <li>Define explicit trust boundaries and verification protocols per agent pairing</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+
+        <details class="risk">
+          <summary>Identity / Impersonation Spoofing <span class="chev">▸</span></summary>
+          <div class="body">
+            <p class="desc">An agent's credentials or identity are used to impersonate a user or another agent to gain unwarranted trust or access.</p>
+            <div class="fixbox">
+              <div class="fixlabel">Mitigation</div>
+              <ul>
+                <li>Use strong agent identity (mTLS, signed tokens) for every inter-agent call</li>
+                <li>Verify sender identity cryptographically before acting on a message</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+
+      </div>
+    </div>
+
+    <div class="connector"><svg width="2" height="30"><line x1="1" y1="0" x2="1" y2="30" stroke="#3ddc97" stroke-width="2" stroke-dasharray="4 4"/></svg></div>
+
+    <div class="track-label">06 — Oversight</div>
+    <div class="stage">
+      <div class="stage-num">STAGE 6</div>
+      <div class="stage-box">
+        <p class="stage-title">Human-in-the-Loop / Approval Gate</p>
+        <p class="stage-desc">Where a human is meant to review or authorize a high-impact action before it executes.</p>
+      </div>
+      <div class="risks">
+
+        <details class="risk">
+          <summary>Excessive Autonomy <span class="chev">▸</span></summary>
+          <div class="body">
+            <p class="desc">Agents take high-impact actions without appropriate human oversight built into the workflow at all.</p>
+            <div class="fixbox">
+              <div class="fixlabel">Mitigation</div>
+              <ul>
+                <li>Tier autonomy by risk/reversibility — low-stakes actions auto-run, high-stakes ones gate</li>
+                <li>Require explicit human approval for anything irreversible or high-value</li>
+                <li>Build kill switches / circuit breakers reachable at any point in execution</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+
+        <details class="risk">
+          <summary>Human-in-the-Loop Bypass (Rubber-Stamping) <span class="chev">▸</span></summary>
+          <div class="body">
+            <p class="desc">Approval steps exist but become pro-forma because humans habitually approve agent requests without real scrutiny.</p>
+            <div class="fixbox">
+              <div class="fixlabel">Mitigation</div>
+              <ul>
+                <li>Run randomized deep-dive audits of "approved" actions to check for rubber-stamping</li>
+                <li>Add friction that requires reviewers to engage with context, not just click approve</li>
+                <li>Track approval latency and patterns to flag suspiciously fast/uniform approvals</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+
+        <details class="risk">
+          <summary>Overreliance / Automation Bias <span class="chev">▸</span></summary>
+          <div class="body">
+            <p class="desc">Humans trust agent decisions and outputs without verification, an organizational risk that compounds every other risk above.</p>
+            <div class="fixbox">
+              <div class="fixlabel">Mitigation</div>
+              <ul>
+                <li>Mandate genuine human review checkpoints for critical decisions, not just visibility</li>
+                <li>Train reviewers on agent failure modes so they know what to look for</li>
+                <li>Surface calibrated confidence, not just an answer, so reviewers can judge trust</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+
+      </div>
+    </div>
+
+    <div class="connector"><svg width="2" height="30"><line x1="1" y1="0" x2="1" y2="30" stroke="#3ddc97" stroke-width="2" stroke-dasharray="4 4"/></svg></div>
+
+    <div class="track-label">07 — Output</div>
+    <div class="stage">
+      <div class="stage-num">STAGE 7</div>
+      <div class="stage-box">
+        <p class="stage-title">Response & Downstream Delivery</p>
+        <p class="stage-desc">The final answer, file, or payload handed back to the user or piped into another system.</p>
+      </div>
+      <div class="risks">
+
+        <details class="risk">
+          <summary>Data Exfiltration <span class="chev">▸</span></summary>
+          <div class="body">
+            <p class="desc">Sensitive information leaks out through tool calls, API requests, or the agent's final output.</p>
+            <div class="fixbox">
+              <div class="fixlabel">Mitigation</div>
+              <ul>
+                <li>Apply egress filtering / DLP scanning on outbound agent output and tool calls</li>
+                <li>Restrict network access from the execution environment to approved destinations</li>
+                <li>Monitor outbound calls for anomalous destinations or payload sizes</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+
+        <details class="risk">
+          <summary>Insecure Output Handling <span class="chev">▸</span></summary>
+          <div class="body">
+            <p class="desc">Agent output is rendered in a UI or passed to another system without sanitization, enabling injection (e.g. XSS) in the consuming app.</p>
+            <div class="fixbox">
+              <div class="fixlabel">Mitigation</div>
+              <ul>
+                <li>Treat agent output as untrusted, just like user input, before rendering or piping it</li>
+                <li>Sanitize/encode output for the specific downstream context (HTML, SQL, shell, etc.)</li>
+                <li>Validate content type before it's consumed by another system</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+
+      </div>
+    </div>
+
+  </div>
+
+  <div class="cross">
+    <div class="track-label">Cross-cutting — not tied to a single stage</div>
+    <div class="cross-grid">
+
+      <div class="cross-card">
+        <details class="risk">
+          <summary>Supply Chain Attacks <span class="chev">▸</span></summary>
+          <div class="body">
+            <p class="desc">Compromised third-party tools, plugins, models, or data sources that the agent depends on across every stage.</p>
+            <div class="fixbox">
+              <div class="fixlabel">Mitigation</div>
+              <ul>
+                <li>Vet and pin exact versions of tools, plugins, and models — no floating dependencies</li>
+                <li>Maintain an SBOM (software bill of materials) for all agent dependencies</li>
+                <li>Verify integrity via checksums/signatures before loading any external component</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <div class="cross-card">
+        <details class="risk">
+          <summary>AI Console Malicious Configuration <span class="chev">▸</span></summary>
+          <div class="body">
+            <p class="desc">The AI developer console is compelled to consume data containing instructions that drive malicious changes to the agent's own configuration.</p>
+            <div class="fixbox">
+              <div class="fixlabel">Mitigation</div>
+              <ul>
+                <li>Require human review and version control for every config change</li>
+                <li>Separate the data plane from the control plane so content can't reach config</li>
+                <li>Sign configs and keep a one-click rollback path</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <div class="cross-card">
+        <details class="risk">
+          <summary>Repudiation & Audit Gaps <span class="chev">▸</span></summary>
+          <div class="body">
+            <p class="desc">Missing or tamperable logging means malicious agent actions can't be traced back or attributed after the fact.</p>
+            <div class="fixbox">
+              <div class="fixlabel">Mitigation</div>
+              <ul>
+                <li>Use immutable, tamper-evident logging (write-once storage, hash chains)</li>
+                <li>Centralize audit logs with defined retention policy</li>
+                <li>Attribute every action to an identity and timestamp, human or agent</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===================== TABLES ===================== -->
+  <div class="tables">
+    <div class="track-label">Reference</div>
+
+    <div class="table-block">
+      <h2>Table 1 — Risks by Pipeline Stage</h2>
+      <p>Where each risk is introduced in the agent's operating loop.</p>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Stage</th><th>Risk</th></tr></thead>
+          <tbody>
+            <tr><td class="stage-col">1 · Ingestion</td><td>Prompt Injection (Direct & Indirect)</td></tr>
+            <tr><td class="stage-col">1 · Ingestion</td><td>Context / Instruction Confusion</td></tr>
+            <tr><td class="stage-col">1 · Ingestion</td><td>Agent Enumeration & Reconnaissance</td></tr>
+            <tr><td class="stage-col">2 · Reasoning</td><td>Goal Hijacking</td></tr>
+            <tr><td class="stage-col">2 · Reasoning</td><td>Decision and Approval Manipulation</td></tr>
+            <tr><td class="stage-col">2 · Reasoning</td><td>Model / Tool Output Hallucination Exploitation</td></tr>
+            <tr><td class="stage-col">3 · Memory</td><td>Memory Poisoning</td></tr>
+            <tr><td class="stage-col">3 · Memory</td><td>Vector / RAG Store Poisoning</td></tr>
+            <tr><td class="stage-col">3 · Memory</td><td>Sensitive Data Exposure</td></tr>
+            <tr><td class="stage-col">4 · Action</td><td>Tool Abuse & Privilege Escalation</td></tr>
+            <tr><td class="stage-col">4 · Action</td><td>High-Impact Action Abuse</td></tr>
+            <tr><td class="stage-col">4 · Action</td><td>Insecure Credential / Secret Handling</td></tr>
+            <tr><td class="stage-col">4 · Action</td><td>Denial of Wallet (DoW)</td></tr>
+            <tr><td class="stage-col">4 · Action</td><td>Unbounded Agentic Loops / Resource Exhaustion</td></tr>
+            <tr><td class="stage-col">5 · Coordination</td><td>Cascading Failures</td></tr>
+            <tr><td class="stage-col">5 · Coordination</td><td>Cross-Agent Trust Exploitation</td></tr>
+            <tr><td class="stage-col">5 · Coordination</td><td>Identity / Impersonation Spoofing</td></tr>
+            <tr><td class="stage-col">6 · Oversight</td><td>Excessive Autonomy</td></tr>
+            <tr><td class="stage-col">6 · Oversight</td><td>Human-in-the-Loop Bypass (Rubber-Stamping)</td></tr>
+            <tr><td class="stage-col">6 · Oversight</td><td>Overreliance / Automation Bias</td></tr>
+            <tr><td class="stage-col">7 · Output</td><td>Data Exfiltration</td></tr>
+            <tr><td class="stage-col">7 · Output</td><td>Insecure Output Handling</td></tr>
+            <tr><td class="stage-col">Cross-cutting</td><td>Supply Chain Attacks</td></tr>
+            <tr><td class="stage-col">Cross-cutting</td><td>AI Console Malicious Configuration</td></tr>
+            <tr><td class="stage-col">Cross-cutting</td><td>Repudiation & Audit Gaps</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="table-block">
+      <h2>Table 2 — Risk → Mitigation Techniques</h2>
+      <p>The same 21 risks with their core fixes, for quick reference or export.</p>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th style="width:22%">Risk</th><th>Key Mitigations</th></tr></thead>
+          <tbody>
+            <tr><td class="risk-col">Prompt Injection</td><td class="fix-col"><ul><li>Treat external content as data, not instructions</li><li>Separate instruction/data channels</li><li>Injection-detection classifier on inputs</li></ul></td></tr>
+            <tr><td class="risk-col">Context / Instruction Confusion</td><td class="fix-col"><ul><li>Explicit trust hierarchy (system > user > tool output)</li><li>Source-tagged structured prompts</li></ul></td></tr>
+            <tr><td class="risk-col">Agent Enumeration & Reconnaissance</td><td class="fix-col"><ul><li>Never leak system prompt / tool schema</li><li>Rate-limit probing patterns</li></ul></td></tr>
+            <tr><td class="risk-col">Goal Hijacking</td><td class="fix-col"><ul><li>Immutable system-level goals</li><li>Continuous goal-consistency checks</li></ul></td></tr>
+            <tr><td class="risk-col">Decision & Approval Manipulation</td><td class="fix-col"><ul><li>Isolate scoring logic from agent input</li><li>Sign/checksum approval thresholds</li></ul></td></tr>
+            <tr><td class="risk-col">Hallucination Exploitation</td><td class="fix-col"><ul><li>Require citations for high-stakes claims</li><li>Cross-verify before executing</li></ul></td></tr>
+            <tr><td class="risk-col">Memory Poisoning</td><td class="fix-col"><ul><li>Sanitize before persisting to memory</li><li>Namespace memory per user/session</li></ul></td></tr>
+            <tr><td class="risk-col">Vector / RAG Store Poisoning</td><td class="fix-col"><ul><li>Allowlist indexed sources</li><li>Anomaly audits on retrieved chunks</li></ul></td></tr>
+            <tr><td class="risk-col">Sensitive Data Exposure</td><td class="fix-col"><ul><li>Classify & mask data on ingestion</li><li>Short TTL on stored context</li></ul></td></tr>
+            <tr><td class="risk-col">Tool Abuse & Privilege Escalation</td><td class="fix-col"><ul><li>Least-privilege per tool</li><li>Scoped, short-lived credentials</li><li>Sandboxed execution</li></ul></td></tr>
+            <tr><td class="risk-col">High-Impact Action Abuse</td><td class="fix-col"><ul><li>Independent validation for irreversible actions</li><li>Maker-checker approval</li></ul></td></tr>
+            <tr><td class="risk-col">Insecure Credential Handling</td><td class="fix-col"><ul><li>Dedicated secret manager</li><li>Short-lived, auto-rotated tokens</li></ul></td></tr>
+            <tr><td class="risk-col">Denial of Wallet</td><td class="fix-col"><ul><li>Hard budget/quota limits</li><li>Real-time spend monitoring</li></ul></td></tr>
+            <tr><td class="risk-col">Unbounded Agentic Loops</td><td class="fix-col"><ul><li>Max step/iteration limits</li><li>Watchdog timeouts</li></ul></td></tr>
+            <tr><td class="risk-col">Cascading Failures</td><td class="fix-col"><ul><li>Circuit breakers between agents</li><li>Validate inter-agent messages</li></ul></td></tr>
+            <tr><td class="risk-col">Cross-Agent Trust Exploitation</td><td class="fix-col"><ul><li>Zero-trust between agents</li><li>Defined trust boundaries</li></ul></td></tr>
+            <tr><td class="risk-col">Identity / Impersonation Spoofing</td><td class="fix-col"><ul><li>Strong agent identity (mTLS/signed tokens)</li><li>Cryptographic sender verification</li></ul></td></tr>
+            <tr><td class="risk-col">Excessive Autonomy</td><td class="fix-col"><ul><li>Tiered autonomy by risk/reversibility</li><li>Reachable kill switches</li></ul></td></tr>
+            <tr><td class="risk-col">HITL Bypass (Rubber-Stamping)</td><td class="fix-col"><ul><li>Randomized approval audits</li><li>Friction requiring real engagement</li></ul></td></tr>
+            <tr><td class="risk-col">Overreliance / Automation Bias</td><td class="fix-col"><ul><li>Mandatory genuine review checkpoints</li><li>Reviewer training on failure modes</li></ul></td></tr>
+            <tr><td class="risk-col">Data Exfiltration</td><td class="fix-col"><ul><li>Egress filtering / DLP</li><li>Restricted network egress</li></ul></td></tr>
+            <tr><td class="risk-col">Insecure Output Handling</td><td class="fix-col"><ul><li>Treat output as untrusted before rendering</li><li>Context-specific sanitization</li></ul></td></tr>
+            <tr><td class="risk-col">Supply Chain Attacks</td><td class="fix-col"><ul><li>Pin & vet dependency versions</li><li>SBOM + signature verification</li></ul></td></tr>
+            <tr><td class="risk-col">AI Console Malicious Config</td><td class="fix-col"><ul><li>Human review + version control on config</li><li>Separate data plane from control plane</li></ul></td></tr>
+            <tr><td class="risk-col">Repudiation & Audit Gaps</td><td class="fix-col"><ul><li>Immutable, tamper-evident logging</li><li>Centralized, attributed audit trail</li></ul></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <footer>21 risks &middot; 7 pipeline stages &middot; 3 cross-cutting layers &middot; click any risk to expand</footer>
+
+</div>
+</body>
+</html>
