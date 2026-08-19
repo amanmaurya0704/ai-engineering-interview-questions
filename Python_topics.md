@@ -234,3 +234,391 @@ Both accept `key=` and `reverse=`. Python sorting is stable, so items with equal
 13. Why should you use `default_factory=list` in a dataclass?
 14. When would you choose a set instead of a list?
 15. Explain `try`, `except`, `else`, and `finally` with a practical use case.
+
+# Python OOP Interview Guide
+
+Object-Oriented Programming (OOP) organizes code around **objects**: values that combine state (data) and behavior (methods). Python supports OOP but also encourages simple functions and composition when they fit better.
+
+## 1. Classes and Objects
+
+A **class** is a blueprint; an **object** (or instance) is a concrete value created from that blueprint. Attributes store data and methods define behavior.
+
+```python
+class Car:
+    def __init__(self, brand, speed=0):
+        self.brand = brand
+        self.speed = speed
+
+    def accelerate(self, amount):
+        self.speed += amount
+
+car = Car("Tesla")
+car.accelerate(20)
+print(car.brand, car.speed)  # Tesla 20
+```
+
+`self` refers to the current instance. It is passed automatically when calling an instance method.
+
+## 2. Constructor: `__init__`
+
+`__init__` initializes an instance after it is created. It is commonly called a constructor, although object creation itself is performed by `__new__`.
+
+Use `__init__` to validate and assign initial object state.
+
+```python
+class User:
+    def __init__(self, name):
+        if not name:
+            raise ValueError("name is required")
+        self.name = name
+```
+
+## 3. Instance, Class, and Static Attributes
+
+An **instance attribute** belongs to one object. A **class attribute** belongs to the class and is shared unless an instance shadows it. Static attributes are usually just class attributes used as constants.
+
+```python
+class Employee:
+    company = "Acme"  # class attribute
+
+    def __init__(self, name):
+        self.name = name  # instance attribute
+
+first = Employee("Asha")
+second = Employee("Ravi")
+first.company = "Other"  # shadows the class attribute only for first
+```
+
+Avoid mutable class attributes for per-instance data because all instances would share the same object.
+
+## 4. Instance Methods, Class Methods, and Static Methods
+
+- **Instance methods** receive `self` and operate on an object’s state.
+- **Class methods** receive `cls` and operate on the class; they are useful for alternate constructors.
+- **Static methods** receive neither automatically; they are utility functions placed inside a class for logical grouping.
+
+```python
+class Temperature:
+    def __init__(self, celsius):
+        self.celsius = celsius
+
+    def fahrenheit(self):
+        return self.celsius * 9 / 5 + 32
+
+    @classmethod
+    def from_fahrenheit(cls, value):
+        return cls((value - 32) * 5 / 9)
+
+    @staticmethod
+    def is_valid(value):
+        return value >= -273.15
+```
+
+## 5. Encapsulation
+
+**Encapsulation** means keeping related data and behavior together and controlling how state is accessed or changed.
+
+Python does not enforce truly private instance attributes in the way some languages do. Instead it uses conventions:
+
+- `name`: public attribute.
+- `_name`: internal-use convention; callers should not depend on it.
+- `__name`: name mangling, intended to avoid accidental clashes in subclasses.
+
+```python
+class BankAccount:
+    def __init__(self, balance):
+        self.__balance = balance
+
+    def deposit(self, amount):
+        if amount <= 0:
+            raise ValueError("amount must be positive")
+        self.__balance += amount
+
+    @property
+    def balance(self):
+        return self.__balance
+```
+
+## 6. Properties: `@property`
+
+A property exposes a method through attribute syntax. It is useful for validation, read-only values, and computed values without changing the public API.
+
+```python
+class Product:
+    def __init__(self, price):
+        self.price = price
+
+    @property
+    def price(self):
+        return self._price
+
+    @price.setter
+    def price(self, value):
+        if value < 0:
+            raise ValueError("price cannot be negative")
+        self._price = value
+```
+
+## 7. Inheritance
+
+**Inheritance** lets a child class reuse and extend a parent class. It models an “is-a” relationship when that relationship is genuinely appropriate.
+
+```python
+class Animal:
+    def speak(self):
+        return "some sound"
+
+class Dog(Animal):
+    def speak(self):
+        return "woof"
+
+print(Dog().speak())  # woof
+```
+
+The child can inherit methods, override them, or add new behavior.
+
+## 8. Method Overriding and Polymorphism
+
+**Method overriding** occurs when a subclass supplies its own implementation of an inherited method. **Polymorphism** means code can work with objects through a common interface even when their concrete types differ.
+
+```python
+class Circle:
+    def area(self):
+        return 3.14159 * self.radius ** 2
+
+    def __init__(self, radius):
+        self.radius = radius
+
+class Square:
+    def __init__(self, side):
+        self.side = side
+
+    def area(self):
+        return self.side ** 2
+
+def total_area(shapes):
+    return sum(shape.area() for shape in shapes)
+```
+
+Python often uses **duck typing**: if an object provides the required methods, its exact class may not matter.
+
+## 9. `super()`
+
+Use `super()` to access parent behavior according to Python’s method resolution order (MRO). It avoids hard-coding a parent class name and works correctly with cooperative multiple inheritance.
+
+```python
+class Vehicle:
+    def __init__(self, wheels):
+        self.wheels = wheels
+
+class Bike(Vehicle):
+    def __init__(self, brand):
+        super().__init__(wheels=2)
+        self.brand = brand
+```
+
+## 10. Multiple Inheritance and MRO
+
+Python allows a class to inherit from more than one parent. The **MRO** determines where Python searches for a method, following the C3 linearization algorithm.
+
+```python
+class A:
+    def identify(self):
+        return "A"
+
+class B(A):
+    pass
+
+class C(A):
+    pass
+
+class D(B, C):
+    pass
+
+print(D.mro())  # D, B, C, A, object
+```
+
+Inspect it with `ClassName.mro()` or `ClassName.__mro__`. In multiple inheritance, classes should generally use `super()` consistently.
+
+## 11. Abstraction and Abstract Base Classes
+
+**Abstraction** exposes an essential interface while hiding implementation details. The `abc` module lets you define abstract methods that child classes must implement.
+
+```python
+from abc import ABC, abstractmethod
+
+class PaymentProcessor(ABC):
+    @abstractmethod
+    def pay(self, amount):
+        """Process a payment."""
+
+class CardProcessor(PaymentProcessor):
+    def pay(self, amount):
+        return f"Charged {amount} by card"
+
+# PaymentProcessor()  # TypeError: abstract class cannot be instantiated
+```
+
+## 12. Composition vs. Inheritance
+
+**Composition** means building an object from other objects, a “has-a” relationship. It is often more flexible than inheritance because behavior can be replaced or combined without a deep class hierarchy.
+
+```python
+class Engine:
+    def start(self):
+        return "engine started"
+
+class Car:
+    def __init__(self, engine):
+        self.engine = engine
+
+    def start(self):
+        return self.engine.start()
+```
+
+Prefer composition when the relationship is not clearly “is-a,” or when behavior should be swappable.
+
+## 13. Special (Dunder) Methods
+
+Special methods let custom objects work with Python syntax and built-ins.
+
+```python
+class Vector:
+    def __init__(self, x, y):
+        self.x, self.y = x, y
+
+    def __add__(self, other):
+        return Vector(self.x + other.x, self.y + other.y)
+
+    def __repr__(self):
+        return f"Vector({self.x}, {self.y})"
+
+    def __eq__(self, other):
+        return isinstance(other, Vector) and (self.x, self.y) == (other.x, other.y)
+```
+
+Common methods include:
+
+- `__init__`: initialize an object.
+- `__new__`: create an object before initialization.
+- `__repr__` / `__str__`: developer-friendly / user-friendly text representation.
+- `__eq__`, `__lt__`: comparison behavior.
+- `__hash__`: hash value for dictionary keys and sets.
+- `__len__`, `__iter__`, `__getitem__`: collection-like behavior.
+- `__call__`: make an instance callable like a function.
+- `__enter__`, `__exit__`: context-manager behavior.
+
+## 14. `__str__` vs. `__repr__`
+
+`__str__` produces a readable string for end users and is used by `str()` and `print()`. `__repr__` produces an unambiguous developer representation and is used in the interactive interpreter and by `repr()`.
+
+When practical, make `__repr__` look like valid code that could recreate the object.
+
+## 15. Equality and Hashing: `__eq__` and `__hash__`
+
+If two objects compare equal, they must have the same hash value. This is necessary for correct dictionary and set behavior.
+
+Mutable objects should usually not be hashable, because changing data that affects the hash after using the object as a dictionary key corrupts lookups. Defining `__eq__` without an appropriate `__hash__` normally makes instances unhashable.
+
+## 16. Dataclasses
+
+`@dataclass` is ideal for data-oriented classes. It can generate `__init__`, `__repr__`, and `__eq__` automatically.
+
+```python
+from dataclasses import dataclass, field
+
+@dataclass(frozen=True)
+class Point:
+    x: int
+    y: int
+
+@dataclass
+class Team:
+    name: str
+    members: list[str] = field(default_factory=list)
+```
+
+Use `default_factory` for mutable defaults. `frozen=True` makes normal attribute reassignment unavailable and can support hashable value objects when fields are hashable.
+
+## 17. `__slots__`
+
+Normally, instances store attributes in a dictionary called `__dict__`. `__slots__` restricts allowed instance attributes and can reduce memory use for many small objects.
+
+```python
+class Coordinate:
+    __slots__ = ("x", "y")
+
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+```
+
+Trade-off: instances generally cannot receive arbitrary new attributes, and inheritance can be more complex.
+
+## 18. Class Relationships
+
+- **Association:** objects know or use each other, such as a teacher teaching a student.
+- **Aggregation:** a whole contains parts that can exist independently, such as a team containing employees.
+- **Composition:** a whole owns parts whose lifecycle is tied to it, such as an order containing order lines.
+
+Python does not enforce these relationships; they are design concepts expressed through references between objects.
+
+## 19. Method Overloading and Operator Overloading
+
+Python does not support traditional method overloading by defining multiple same-named methods with different signatures; later definitions replace earlier ones. Use default values, `*args`, or `functools.singledispatchmethod` when needed.
+
+**Operator overloading** is supported through dunder methods such as `__add__` for `+` and `__lt__` for `<`.
+
+## 20. Object Lifecycle and Garbage Collection
+
+Object creation usually involves `__new__` followed by `__init__`. CPython mainly uses reference counting and also has a garbage collector for many reference cycles.
+
+Avoid relying on `__del__` for important cleanup. Prefer context managers (`with`) and explicit `close()` methods for files, network connections, and other external resources.
+
+## 21. Type Hints, Protocols, and OOP
+
+Type hints document an object’s expected interface. A `Protocol` defines structural typing: an object is acceptable if it provides the required members, regardless of inheritance.
+
+```python
+from typing import Protocol
+
+class HasArea(Protocol):
+    def area(self) -> float: ...
+
+def print_area(shape: HasArea) -> None:
+    print(shape.area())
+```
+
+This formalizes duck typing for static type checkers.
+
+## 22. Design Principles for Interviews
+
+- Prefer **single responsibility**: each class should have one focused reason to change.
+- Favor **composition over inheritance** when it keeps behavior flexible.
+- Depend on interfaces/abstractions rather than concrete implementations when practical.
+- Keep public APIs small and clear; hide internal implementation details.
+- Use inheritance only for a valid substitutable “is-a” relationship.
+
+# Common OOP Interview Questions
+
+1. What is the difference between a class and an object?
+2. Explain encapsulation, inheritance, polymorphism, and abstraction in Python.
+3. What are `self` and `cls`?
+4. Compare instance methods, class methods, and static methods.
+5. What is method overriding? Does Python support method overloading?
+6. Explain `super()` and why it is better than directly naming a parent class.
+7. What is the MRO, and how do you inspect it?
+8. What problems can multiple inheritance cause, and how does Python address them?
+9. Explain composition versus inheritance. When would you choose each?
+10. What are dunder methods? Name several useful examples.
+11. Compare `__str__` and `__repr__`.
+12. What is the contract between `__eq__` and `__hash__`?
+13. Why can mutable objects be problematic as dictionary keys?
+14. What does `@property` solve, compared with directly exposing an attribute?
+15. What is an abstract base class, and when would you use one?
+16. What is duck typing? How do `Protocol` types relate to it?
+17. What are dataclasses, and why is `default_factory` important?
+18. What does `__slots__` do, and what are its trade-offs?
+19. What are class attributes, and how can they accidentally be shared?
+20. Why should external-resource cleanup use context managers rather than `__del__`?
+
